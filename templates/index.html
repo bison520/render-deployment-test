@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Render部署測試應用程式</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .data-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .data-item h4 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .data-item p {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .timestamp {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Render部署測試</h1>
+            <p>測試您的GitHub到Render部署流程</p>
+        </div>
+
+        <div class="content">
+            <div id="status" class="status"></div>
+            
+            <form id="dataForm">
+                <div class="form-group">
+                    <label for="name">您的姓名：</label>
+                    <input type="text" id="name" name="name" required placeholder="請輸入您的姓名">
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">留言訊息：</label>
+                    <textarea id="message" name="message" required placeholder="請輸入您的留言訊息"></textarea>
+                </div>
+                
+                <button type="submit" class="btn">提交數據</button>
+                <button type="button" class="btn btn-success" onclick="loadData()">重新載入數據</button>
+                <button type="button" class="btn btn-danger" onclick="clearData()">清除所有數據</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>處理中...</p>
+            </div>
+
+            <div class="data-section">
+                <h3>已提交的數據 (<span id="dataCount">0</span>)</h3>
+                <div id="dataContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 顯示狀態訊息
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        // 顯示/隱藏載入動畫
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // 提交表單數據
+        document.getElementById('dataForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const message = document.getElementById('message').value.trim();
+            
+            if (!name || !message) {
+                showStatus('請填寫所有欄位', 'error');
+                return;
+            }
+            
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, message })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(result.message);
+                    document.getElementById('dataForm').reset();
+                    loadData();
+                } else {
+                    showStatus(result.error, 'error');
+                }
+            } catch (error) {
+                showStatus('提交失敗：' + error.message, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // 載入數據
+        async function loadData() {
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/data');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayData(result.data);
+                } else {
+                    showStatus('載入數據失敗', 'error');
+                }
+            } catch (error) {
+                showStatus('載入數據失敗：' + error.message, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // 顯示數據
+        function displayData(data) {
+            const container = document.getElementById('dataContainer');
+            const count = document.getElementById('dataCount');
+            
+            count.textContent = data.length;
+            
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">尚無數據</p>';
+                return;
+            }
+            
+            container.innerHTML = data.map(item => `
+                <div class="data-item">
+                    <h4>${item.name}</h4>
+                    <p><strong>訊息：</strong>${item.message}</p>
+                    <p class="timestamp">提交時間：${new Date(item.timestamp).toLocaleString('zh-TW')}</p>
+                </div>
+            `).join('');
+        }
+
+        // 清除數據
+        async function clearData() {
+            if (!confirm('確定要清除所有數據嗎？此操作無法復原。')) {
+                return;
+            }
+            
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(result.message);
+                    loadData();
+                } else {
+                    showStatus('清除數據失敗', 'error');
+                }
+            } catch (error) {
+                showStatus('清除數據失敗：' + error.message, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // 頁面載入時自動載入數據
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+    </script>
+</body>
+</html>
