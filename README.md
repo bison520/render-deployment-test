@@ -33,7 +33,11 @@ pip install -r requirements.txt
 
 3. 運行應用程式：
 ```bash
+# 開發環境
 python app.py
+
+# 或使用啟動腳本
+start.bat
 ```
 
 4. 開啟瀏覽器訪問：`http://localhost:5000`
